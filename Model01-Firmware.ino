@@ -179,20 +179,26 @@ KEYMAPS(
   [RIGHT_FN] =  KEYMAP_STACKED
   (___, ___, ___, ___, ___, ___, ___,
    ___, ___, ___, ___, ___, ___, ___,
-   ___, ___, ___, ___, ___, ___,
+   // a,s,d,f open specific applications (via triggers defined in Quicksilver)
+   ___, LGUI(Key_F13), LGUI(Key_F14), LGUI(Key_F15), LGUI(Key_F16), ___,
    ___, ___, ___, ___, ___, ___, ___,
    ___, ___, ___, ___,
    ShiftToLayer(BOTH_FN),
 
    ___, ___, ___, ___, ___, ___, ___,
-   ___, ___, ___, ___, ___, ___, ___,
-        ___, ___, ___, ___, ___, ___,
-   ___, ___, ___, ___, ___, ___, ___,
+   // y,o switch workspaces in Slack
+   // u,i switch channels in Slack
+   ___, LGUI(LSHIFT(Key_LeftBracket)), LALT(Key_DownArrow), LALT(Key_UpArrow), LGUI(LSHIFT(Key_RightBracket)), ___, ___,
+   // j,k switch tabs within most programs (Chrome, iTerm, Sublime Text, etc)
+        ___, LALT(LGUI(Key_LeftArrow)), LALT(LGUI(Key_RightArrow)), ___, ___, ___,
+   // n switches open windows in the current program
+   ___, LGUI(Key_Backtick), ___, ___, ___, ___, ___,
    ___, ___, ___, ___,
    ___),
 
   [BOTH_FN] =  KEYMAP_STACKED
-  (___, ___, ___, ___, ___, ___, ___,
+  // 1,2,3,4 reposition windows using ShiftIt (equivalent to ShiftIt number commands)
+  (___, LCTRL(LALT(LGUI(Key_1))), LCTRL(LALT(LGUI(Key_2))), LCTRL(LALT(LGUI(Key_3))), LCTRL(LALT(LGUI(Key_4))), ___, ___,
    ___, ___, ___, ___, ___, ___, ___,
    ___, ___, ___, ___, ___, ___,
    ___, ___, ___, ___, ___, ___, ___,
@@ -200,9 +206,12 @@ KEYMAPS(
    ___,
 
    ___, ___, ___, ___, ___, ___, ___,
-   ___, ___, ___, ___, ___, ___, ___,
-        ___, ___, ___, ___, ___, ___,
-   ___, ___, ___, ___, ___, ___, ___,
+   // u,i resize windows using ShiftIt (equivalent to ShiftIt +,-)
+   ___, ___, LCTRL(LALT(LGUI(Key_Equals))), LCTRL(LALT(LGUI(Key_Minus))), ___, ___, ___,
+   // h,j,k,l reposition windows using ShiftIt (equivalent to ShiftIt arrow commands)
+        LCTRL(LALT(LGUI(Key_LeftArrow))), LCTRL(LALT(LGUI(Key_DownArrow))), LCTRL(LALT(LGUI(Key_UpArrow))), LCTRL(LALT(LGUI(Key_RightArrow))), ___, ___,
+   // n,m are more ShiftIt commands (equivalent to ShiftIt n,m)
+   ___, LCTRL(LALT(LGUI(Key_N))), LCTRL(LALT(LGUI(Key_M))), ___, ___, ___, ___,
    ___, ___, ___, ___,
    ___)
 ) // KEYMAPS(
