@@ -68,7 +68,9 @@
   */
 
 enum { MACRO_VERSION_INFO,
-       MACRO_ANY
+       MACRO_ANY,
+       MACRO_APP_SWITCHER,
+       MACRO_APP_SHIFT_SWITCHER
      };
 
 
@@ -189,8 +191,9 @@ KEYMAPS(
    // y,o switch workspaces in Slack
    // u,i switch channels in Slack
    ___, LGUI(LSHIFT(Key_LeftBracket)), LALT(Key_DownArrow), LALT(Key_UpArrow), LGUI(LSHIFT(Key_RightBracket)), ___, ___,
+   // h,l switch applications using the cmd+tab app switcher
    // j,k switch tabs within most programs (Chrome, iTerm, Sublime Text, etc)
-        ___, LALT(LGUI(Key_LeftArrow)), LALT(LGUI(Key_RightArrow)), ___, ___, ___,
+        M(MACRO_APP_SHIFT_SWITCHER), LALT(LGUI(Key_LeftArrow)), LALT(LGUI(Key_RightArrow)), M(MACRO_APP_SWITCHER), ___, ___,
    // n switches open windows in the current program
    ___, LGUI(Key_Backtick), ___, ___, ___, ___, ___,
    ___, ___, ___, ___,
@@ -252,6 +255,83 @@ static void anyKeyMacro(uint8_t keyState) {
 }
 
 
+/** macOS app switcher
+ *
+ * The goal here is for right fn+L to act like cmd+tab, and for right fn+H to
+ * act like cmd+shift+tab. Just like holding down cmd keeps the app switcher
+ * open, holding down right fn keeps the app switcher open. Holding or tapping
+ * L similarly mimics the behavior of holding or tapping tab.
+ *
+ * (If you want to change which key combinations activate the app switcher,
+ * the appropriate place to do so is in the keymap, above.)
+ *
+ * We need to issue raw keyswitch events rather than simply using Kaleidoscope
+ * macros in order to ensure that cmd and tab are held (triggering key repeat
+ * events in the OS), rather than sending keydown and keyup events every
+ * single cycle. For more details, see my bug report here:
+ * https://community.keyboard.io/t/are-there-docs-on-key-states-keytoggledon-key-is-pressed-key-toggled-off-anywhere/890
+ */
+
+// when this is true, cmd will be held in order to keep the app switcher open
+static bool appSwitcherActive = false;
+
+static void appSwitcherMacro(uint8_t keyState, bool isShift) {
+  appSwitcherActive = true;
+
+  if (keyToggledOn(keyState)) {
+    // when the key is initially pressed, we should press cmd+(shift)+tab
+    //
+    // note that we need to press cmd here (unlike in the other branches of
+    // this if statement) and can't depend on the loop (as the other branches
+    // do) because cmd+tab requires that cmd be pressed before tab in order to
+    // open the app switcher, whereas the loop by itself would not press cmd
+    // until the cycle after tab
+    handleKeyswitchEvent(Key_LeftGui, UnknownKeyswitchLocation, IS_PRESSED | INJECTED);
+    handleKeyswitchEvent(Key_Tab, UnknownKeyswitchLocation, IS_PRESSED | INJECTED);
+    if (isShift)
+      handleKeyswitchEvent(Key_LeftShift, UnknownKeyswitchLocation, IS_PRESSED | INJECTED);
+
+  } else if (keyIsPressed(keyState)) {
+    // when the key is held, we should hold (shift)+tab (the loop will hold cmd)
+    handleKeyswitchEvent(Key_Tab, UnknownKeyswitchLocation, IS_PRESSED | WAS_PRESSED | INJECTED);
+    if (isShift)
+      handleKeyswitchEvent(Key_LeftShift, UnknownKeyswitchLocation, IS_PRESSED | WAS_PRESSED | INJECTED);
+
+  } else if (keyToggledOff(keyState)) {
+    // when the key is released, we should release (shift)+tab (but the loop
+    // will continue to hold cmd in order to keep the app switcher open)
+    handleKeyswitchEvent(Key_Tab, UnknownKeyswitchLocation, WAS_PRESSED | INJECTED);
+    if (isShift)
+      handleKeyswitchEvent(Key_LeftShift, UnknownKeyswitchLocation, WAS_PRESSED | INJECTED);
+  }
+}
+
+void macroAppSwitcherLoop() {
+  if (!appSwitcherActive)
+    return;
+
+  KeyAddr leftFnAddr = KeyAddr(3, 6);
+  KeyAddr rightFnAddr = KeyAddr(3, 9);
+
+  if (kaleidoscope::Runtime.device().isKeyswitchPressed(leftFnAddr) ||
+      kaleidoscope::Runtime.device().isKeyswitchPressed(rightFnAddr)) {
+    // keep holding cmd (to keep the app switcher open) as long as *either*
+    // function button is held
+    //
+    // although the keymap above only opens the app switcher using the right
+    // function button, it can be useful to switch to holding the left
+    // function button in order to use j,k (up/down arrows) to open Expose
+    handleKeyswitchEvent(Key_LeftGui, UnknownKeyswitchLocation, IS_PRESSED | WAS_PRESSED | INJECTED);
+  } else {
+    // when the function buttons are released, we should release cmd in order
+    // to close the app switcher
+    appSwitcherActive = false;
+
+    handleKeyswitchEvent(Key_LeftGui, UnknownKeyswitchLocation, WAS_PRESSED | INJECTED);
+  }
+}
+
+
 /** macroAction dispatches keymap events that are tied to a macro
     to that macro. It takes two uint8_t parameters.
 
@@ -274,6 +354,15 @@ const macro_t *macroAction(uint8_t macroIndex, uint8_t keyState) {
   case MACRO_ANY:
     anyKeyMacro(keyState);
     break;
+
+  case MACRO_APP_SWITCHER:
+    appSwitcherMacro(keyState, /* isShift */ false);
+    break;
+
+  case MACRO_APP_SHIFT_SWITCHER:
+    appSwitcherMacro(keyState, /* isShift */ true);
+    break;
+
   }
   return MACRO_NONE;
 }
@@ -460,4 +549,7 @@ void setup() {
 
 void loop() {
   Kaleidoscope.loop();
+
+  // this loop ensures that cmd is held down when the app switcher is active
+  macroAppSwitcherLoop();
 }
